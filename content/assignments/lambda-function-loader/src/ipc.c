@@ -9,11 +9,13 @@
 
 #include "ipc.h"
 
-
 int create_socket(void)
 {
 	/* TODO: Implement create_socket(). */
-	return -1;
+	int sockfd;
+	sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+	DIE(sockfd == -1, "socket");
+	return sockfd;
 }
 
 int connect_socket(int fd)
