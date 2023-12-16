@@ -8,10 +8,10 @@
 #include <unistd.h>
 
 #include "ipc.h"
+#include "utils/utils.h"
 
 int create_socket(void)
 {
-	/* TODO: Implement create_socket(). */
 	int sockfd;
 	sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	DIE(sockfd == -1, "socket");
@@ -20,13 +20,20 @@ int create_socket(void)
 
 int connect_socket(int fd)
 {
-	/* TODO: Implement connect_socket(). */
-	return -1;
+	struct sockaddr_un addr;
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	snprintf(addr.sun_path, sizeof(SOCKET_NAME), "%s", SOCKET_NAME);
+	int rc;
+	rc = connect(fd, (struct sockaddr *) &addr, sizeof(addr));
+	DIE(rc < 0, "connect");
+	return rc;
 }
 
 ssize_t send_socket(int fd, const char *buf, size_t len)
 {
 	/* TODO: Implement send_socket(). */
+
 	return -1;
 }
 
@@ -39,4 +46,7 @@ ssize_t recv_socket(int fd, char *buf, size_t len)
 void close_socket(int fd)
 {
 	/* TODO: Implement close_socket(). */
+	int rc;
+	rc = close(fd);
+	DIE(rc < 0, "clozz`se");
 }
