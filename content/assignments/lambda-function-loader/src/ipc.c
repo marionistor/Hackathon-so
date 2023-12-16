@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include "ipc.h"
-#include "utils/utils.h"
+#include "../utils/utils.h"
 
 int create_socket(void)
 {
@@ -32,7 +32,8 @@ int connect_socket(int fd)
 
 ssize_t send_socket(int fd, const char *buf, size_t len)
 {
-	int send_id = 0, counter = 0;
+	size_t send_id = 0; 
+	ssize_t counter = 0;
 
 	// Write to the socket until the end of the buffer
 	while (send_id < len) {
@@ -49,7 +50,8 @@ ssize_t send_socket(int fd, const char *buf, size_t len)
 
 ssize_t recv_socket(int fd, char *buf, size_t len)
 {
-	int recv_id = 0, counter = 0;
+	size_t recv_id = 0; 
+	ssize_t counter = 0;
 
 	// Read from the socket until the end of the buffer
 	while (recv_id < len) {
