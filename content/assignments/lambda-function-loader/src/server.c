@@ -47,7 +47,7 @@ static int lib_load(struct lib *lib)
 	lib->handle = dlopen(lib->filename, RTLD_LAZY);
 	if (lib->handle == NULL)
 		return -1;
-	
+
 	return 0;
 }
 
