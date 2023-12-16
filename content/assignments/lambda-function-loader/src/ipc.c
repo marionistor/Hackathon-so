@@ -39,42 +39,26 @@ int connect_socket(int fd)
 
 ssize_t send_socket(int fd, const char *buf, size_t len)
 {
-	size_t send_id = 0;
-	ssize_t counter = 0;
+	ssize_t bytes_sent = send(fd, buf, len, 0);
 
-	// Write to the socket until the end of the buffer
-	while (send_id < len) {
-		counter = write(fd, buf + send_id, len - send_id);
-		if (counter == -1) {
-			fprintf(stderr, "failed send\n");
-			return -1;
-		} else if (counter == 0) {
-			break;
-		}
-		send_id += counter;
+	if (bytes_sent == -1) {
+		fprintf(stderr, "failed send\n");
+		return -1;
 	}
 
-	return send_id;
+	return bytes_sent;
 }
 
 ssize_t recv_socket(int fd, char *buf, size_t len)
 {
-	size_t recv_id = 0;
-	ssize_t counter = 0;
+	ssize_t bytes_recv = recv(fd, buf, len, 0);
 
-	// Read from the socket until the end of the buffer
-	while (recv_id < len) {
-		counter = read(fd, buf + recv_id, len - recv_id);
-		if (counter == -1) {
-			fprintf(stderr, "failed recv\n");
-			return -1;
-		} else if (counter == 0) {
-			break;
-		}
-		recv_id += counter;
+	if (bytes_recv == -1) {
+		fprintf(stderr, "failed recv\n");
+		return -1;
 	}
 
-	return recv_id;
+	return bytes_recv;
 }
 
 void close_socket(int fd)

@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include "ipc.h"
 #include "server.h"
@@ -86,15 +88,45 @@ int main(void)
 	/* TODO: Implement server connection. */
 	int ret;
 	struct lib lib;
+	struct sockaddr_un addr, raddr;
+	socklen_t raddrlen;
+	int listenfd, connectfd;
+	char buf[BUFSIZE];
 
-	
+	remove(SOCKET_NAME);
+
+	listenfd = create_socket();
+	// todo err
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	snprintf(addr.sun_path, sizeof(SOCKET_NAME), "%s", SOCKET_NAME);
+	ret	= bind(listenfd, (struct sockaddr *) &addr, sizeof(addr));
+	// todo err
+
+	ret = listen(listenfd, MAX_CLIENTS);
 
 	while (1) {
 		/* TODO - get message from client */
+
+		//printf("before\n");
+		connectfd = accept(listenfd, (struct sockaddr *) &raddr, &raddrlen);
+		// todo err
+		//printf("after\n");
+
+		memset(buf, 0, BUFSIZE);
+		ssize_t recv_id = recv_socket(connectfd, buf, BUFSIZE);
+
+		send_socket(connectfd, buf, BUFSIZE);
+
+		printf("%s\n", buf);
+
 		/* TODO - parse message with parse_command and populate lib */
 		/* TODO - handle request from client */
 		ret = lib_run(&lib);
+		close(connectfd);
 	}
+
+	close_socket(listenfd);
 
 	return 0;
 }
