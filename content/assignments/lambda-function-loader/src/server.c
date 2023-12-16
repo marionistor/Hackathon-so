@@ -34,46 +34,90 @@ static int lib_prehooks(struct lib *lib)
 	if (lib->outputfile == NULL)
 		return -1;
 
-	strcpy(lib->outputfile, OUTPUT_TEMPLATE);
-	int err = mkstemp(lib->outputfile);
-	if (err == -1)
-		return -1;
-
 	return 0;
 }
 
 static int lib_load(struct lib *lib)
 {
-	lib->handle = dlopen(lib->filename, RTLD_LAZY);
+	lib->handle = dlopen(lib->libname, RTLD_LAZY);
+
 	if (lib->handle == NULL)
 		return -1;
-	if (strlen(lib->funcname) == 0) {
+
+	if (!strlen(lib->funcname)) {
+		strcpy(lib->funcname, "run");
+	}
+
+	if (!strlen(lib->filename)) {
 		lib->run = dlsym(lib->handle, lib->funcname);
+		lib->p_run = NULL;
 		if (lib->run == NULL)
 			return -1;
-	} else {
-		lib->p_run = dlsym(lib->handle, lib->funcname);
-		if (lib->p_run == NULL)
-			return -1;
+
+		return 0;
 	}
+
+	lib->p_run = dlsym(lib->handle, lib->funcname);
+	lib->run = NULL;
+	if (lib->p_run == NULL)
+		return -1;
+
 	return 0;
 }
 
 static int lib_execute(struct lib *lib)
 {
 	/* TODO: Implement lib_execute(). */
+	int fd, rc;
+
+	strcpy(lib->outputfile, OUTPUT_TEMPLATE);
+	fd = mkstemp(lib->outputfile);
+	if (fd == -1)
+		return -1;
+
+	rc = dup2(fd, STDOUT_FILENO);
+	if (rc == -1) {
+		return -1;
+	}
+
+	if (!strlen(lib->filename)) {
+		lib->run();
+
+		rc = close(fd);
+		if (rc == -1)
+			return -1;
+
+		return 0;
+	}
+
+	lib->p_run(lib->filename);
+
+	rc = close(fd);
+	if (rc == -1)
+		return -1;
+
 	return 0;
 }
 
 static int lib_close(struct lib *lib)
 {
 	/* TODO: Implement lib_close(). */
+	int rc;
+
+	rc = dlclose(lib->handle);
+
+	if (rc == -1)
+		return -1;
+
 	return 0;
 }
 
 static int lib_posthooks(struct lib *lib)
 {
 	/* TODO: Implement lib_posthooks(). */
+	free(lib->filename);
+	free(lib->funcname);
+	free(lib->libname);
 	return 0;
 }
 
@@ -117,6 +161,8 @@ int main(void)
 	int listenfd, connectfd;
 	char buf[BUFSIZE];
 
+	setvbuf(stdout, NULL, _IONBF, 0);
+
 	remove(SOCKET_NAME);
 
 	listenfd = create_socket();
@@ -148,24 +194,37 @@ int main(void)
 			return -1;
 		}
 
-		memset(buf, 0, BUFSIZE);
-		ssize_t recv_id = recv_socket(connectfd, buf, BUFSIZE);
-		if (recv_id == -1) {
-			fprintf(stderr, "failed recv");
-			return -1;
+		pid_t pid;
+
+		pid = fork();
+
+		switch (pid) {
+			case -1:
+				fprintf(stderr, "fork failed\n");
+				break;
+			case 0:
+				daemon(1, 1);
+				memset(buf, 0, BUFSIZE);
+				ssize_t recv_id = recv_socket(connectfd, buf, BUFSIZE);
+				if (recv_id == -1) {
+					fprintf(stderr, "failed recv");
+					return -1;
+				}
+
+				lib_prehooks(&lib);
+
+				parse_command(buf, lib.libname, lib.funcname, lib.filename);
+
+				/* TODO - parse message with parse_command and populate lib */
+				/* TODO - handle request from client */
+				ret = lib_run(&lib);
+				send_socket(connectfd, lib.outputfile, strlen(lib.outputfile));
+				free(lib.outputfile);
+				break;
+			default:
+				break;
 		}
 
-		lib_prehooks(&lib);
-
-		parse_command(buf, lib.libname, lib.funcname, lib.filename);
-
-		// send_socket(connectfd, buf, BUFSIZE);
-
-		// printf("%s\n", buf);
-
-		/* TODO - parse message with parse_command and populate lib */
-		/* TODO - handle request from client */
-		ret = lib_run(&lib);
 		close_socket(connectfd);
 	}
 
