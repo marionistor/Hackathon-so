@@ -22,7 +22,9 @@ int fd;
 
 static int lib_prehooks(struct lib *lib)
 {
-	/* TODO: Implement lib_prehooks(). */
+	/* allocate memory for char * field in struct lib
+	 * and initialise with 0
+	 */
 	lib->libname = calloc(BUFSIZE, sizeof(char));
 	if (lib->libname == NULL)
 		return -1;
@@ -43,16 +45,21 @@ static int lib_load(struct lib *lib)
 {
 	int rc;
 
+	// get outputgfile name
 	strcpy(lib->outputfile, OUTPUT_TEMPLATE);
 	fd = mkstemp(lib->outputfile);
 	if (fd == -1)
 		return -1;
 
+	/* make stdout refer to outputfile in order
+	 * to print message to standard output
+	 */
 	rc = dup2(fd, STDOUT_FILENO);
 	if (rc == -1) {
 		return -1;
 	}
 
+	// get handler
 	lib->handle = dlopen(lib->libname, RTLD_LAZY);
 
 	if (lib->handle == NULL) {
@@ -66,10 +73,12 @@ static int lib_load(struct lib *lib)
 		return -1;
 	}
 
+	// there is no funcname, the function is run
 	if (!strlen(lib->funcname)) {
 		strcpy(lib->funcname, "run");
 	}
 
+	// there is no parameter
 	if (!strlen(lib->filename)) {
 		lib->run = dlsym(lib->handle, lib->funcname);
 		lib->p_run = NULL;
@@ -80,6 +89,7 @@ static int lib_load(struct lib *lib)
 		return 0;
 	}
 
+	// function with parameter
 	lib->p_run = dlsym(lib->handle, lib->funcname);
 	lib->run = NULL;
 	if (lib->p_run == NULL) {
@@ -91,9 +101,9 @@ static int lib_load(struct lib *lib)
 
 static int lib_execute(struct lib *lib)
 {
-	/* TODO: Implement lib_execute(). */
 	int rc;
 
+	// run function without parameter
 	if (!strlen(lib->filename)) {
 		lib->run();
 
@@ -104,6 +114,7 @@ static int lib_execute(struct lib *lib)
 		return 0;
 	}
 
+	// run function with parameter
 	lib->p_run(lib->filename);
 
 	rc = close(fd);
@@ -115,9 +126,9 @@ static int lib_execute(struct lib *lib)
 
 static int lib_close(struct lib *lib)
 {
-	/* TODO: Implement lib_close(). */
 	int rc;
 
+	// close object opened by dlopen
 	rc = dlclose(lib->handle);
 
 	if (rc == -1)
@@ -128,7 +139,6 @@ static int lib_close(struct lib *lib)
 
 static int lib_posthooks(struct lib *lib)
 {
-	/* TODO: Implement lib_posthooks(). */
 	free(lib->filename);
 	free(lib->funcname);
 	free(lib->libname);
@@ -174,6 +184,7 @@ int main(void)
 	socklen_t raddrlen;
 	int listenfd, connectfd;
 	char buf[BUFSIZE];
+	ssize_t recv_id, send_id;
 
 	setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -181,7 +192,7 @@ int main(void)
 
 	listenfd = create_socket();
 	if (listenfd == -1) {
-		fprintf(stderr, "unix socket");
+		fprintf(stderr, "failed create_socket\n");
 		return -1;
 	}
 	memset(&addr, 0, sizeof(addr));
@@ -189,23 +200,22 @@ int main(void)
 	snprintf(addr.sun_path, sizeof(SOCKET_NAME), "%s", SOCKET_NAME);
 	ret	= bind(listenfd, (struct sockaddr *) &addr, sizeof(addr));
 	if (ret == -1) {
-		fprintf(stderr, "bind unix socket");
-		return -1;
+		fprintf(stderr, "failed bind\n");
+		exit(EXIT_FAILURE);
 	}
 
 	ret = listen(listenfd, MAX_CLIENTS);
 	if (ret == -1) {
-		fprintf(stderr, "listen unix socket");
-		return -1;
+		fprintf(stderr, "failed listen\n");
+		exit(EXIT_FAILURE);
 	}
 
 	while (1) {
-		/* TODO - get message from client */
 
 		connectfd = accept(listenfd, (struct sockaddr *) &raddr, &raddrlen);
 		if (connectfd == -1) {
-			fprintf(stderr, "accept unix socket");
-			return -1;
+			fprintf(stderr, "failed accept\n");
+			exit(EXIT_FAILURE);
 		}
 
 		pid_t pid;
@@ -214,25 +224,34 @@ int main(void)
 
 		switch (pid) {
 			case -1:
-				fprintf(stderr, "fork failed\n");
+				fprintf(stderr, "failed fork\n");
 				break;
 			case 0:
 				daemon(1, 1);
 				memset(buf, 0, BUFSIZE);
-				ssize_t recv_id = recv_socket(connectfd, buf, BUFSIZE);
+				/* TODO - get message from client */
+				recv_id = recv_socket(connectfd, buf, BUFSIZE);
 				if (recv_id == -1) {
-					fprintf(stderr, "failed recv");
-					return -1;
+					fprintf(stderr, "failed recv_socket\n");
+					exit(EXIT_FAILURE);
 				}
 
-				lib_prehooks(&lib);
-
-				parse_command(buf, lib.libname, lib.funcname, lib.filename);
+				ret = lib_prehooks(&lib);
+				if (ret == -1) {
+					fprintf(stderr, "failed lib_prehooks\n");
+					exit(EXIT_FAILURE);
+				}
 
 				/* TODO - parse message with parse_command and populate lib */
+				parse_command(buf, lib.libname, lib.funcname, lib.filename);
+
 				/* TODO - handle request from client */
-				ret = lib_run(&lib);
-				send_socket(connectfd, lib.outputfile, strlen(lib.outputfile));
+				lib_run(&lib);
+				send_id = send_socket(connectfd, lib.outputfile, strlen(lib.outputfile));
+				if (send_id == -1) {
+					fprintf(stderr, "failed send_socket\n");
+					exit(EXIT_FAILURE);
+				}
 				free(lib.outputfile);
 				break;
 			default:
