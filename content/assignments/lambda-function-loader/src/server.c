@@ -56,7 +56,13 @@ static int lib_load(struct lib *lib)
 	lib->handle = dlopen(lib->libname, RTLD_LAZY);
 
 	if (lib->handle == NULL) {
-		printf("Error: %s %s %s could not be executed.\n", lib->libname, lib->funcname, lib->filename);
+		if (!strlen(lib->funcname)) {
+			printf("Error: %s could not be executed.\n", lib->libname);
+		} else if (!strlen(lib->filename)) {
+			printf("Error: %s %s could not be executed.\n", lib->libname, lib->funcname);
+		} else {
+			printf("Error: %s %s %s could not be executed.\n", lib->libname, lib->funcname, lib->filename);
+		}
 		return -1;
 	}
 
