@@ -19,6 +19,7 @@
 static int lib_prehooks(struct lib *lib)
 {
 	/* TODO: Implement lib_prehooks(). */
+
 	return 0;
 }
 
@@ -85,6 +86,8 @@ int main(void)
 	/* TODO: Implement server connection. */
 	int ret;
 	struct lib lib;
+
+	
 
 	while (1) {
 		/* TODO - get message from client */

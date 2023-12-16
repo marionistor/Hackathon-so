@@ -33,13 +33,13 @@ int connect_socket(int fd)
 		fprintf(stderr, "failed connect\n");
 		return -1;
 	}
-	
+
 	return rc;
 }
 
 ssize_t send_socket(int fd, const char *buf, size_t len)
 {
-	size_t send_id = 0; 
+	size_t send_id = 0;
 	ssize_t counter = 0;
 
 	// Write to the socket until the end of the buffer
@@ -50,7 +50,7 @@ ssize_t send_socket(int fd, const char *buf, size_t len)
 			return -1;
 		} else if (counter == 0) {
 			break;
-		}	
+		}
 		send_id += counter;
 	}
 
@@ -59,7 +59,7 @@ ssize_t send_socket(int fd, const char *buf, size_t len)
 
 ssize_t recv_socket(int fd, char *buf, size_t len)
 {
-	size_t recv_id = 0; 
+	size_t recv_id = 0;
 	ssize_t counter = 0;
 
 	// Read from the socket until the end of the buffer
