@@ -18,6 +18,8 @@
 #define OUTPUT_TEMPLATE "../checker/output/out-XXXXXX"
 #endif
 
+int fd;
+
 static int lib_prehooks(struct lib *lib)
 {
 	/* TODO: Implement lib_prehooks(). */
@@ -39,36 +41,7 @@ static int lib_prehooks(struct lib *lib)
 
 static int lib_load(struct lib *lib)
 {
-	lib->handle = dlopen(lib->libname, RTLD_LAZY);
-
-	if (lib->handle == NULL)
-		return -1;
-
-	if (!strlen(lib->funcname)) {
-		strcpy(lib->funcname, "run");
-	}
-
-	if (!strlen(lib->filename)) {
-		lib->run = dlsym(lib->handle, lib->funcname);
-		lib->p_run = NULL;
-		if (lib->run == NULL)
-			return -1;
-
-		return 0;
-	}
-
-	lib->p_run = dlsym(lib->handle, lib->funcname);
-	lib->run = NULL;
-	if (lib->p_run == NULL)
-		return -1;
-
-	return 0;
-}
-
-static int lib_execute(struct lib *lib)
-{
-	/* TODO: Implement lib_execute(). */
-	int fd, rc;
+	int rc;
 
 	strcpy(lib->outputfile, OUTPUT_TEMPLATE);
 	fd = mkstemp(lib->outputfile);
@@ -79,6 +52,41 @@ static int lib_execute(struct lib *lib)
 	if (rc == -1) {
 		return -1;
 	}
+
+	lib->handle = dlopen(lib->libname, RTLD_LAZY);
+
+	if (lib->handle == NULL) {
+		printf("Error: %s %s %s could not be executed.\n", lib->libname, lib->funcname, lib->filename);
+		return -1;
+	}
+
+	if (!strlen(lib->funcname)) {
+		strcpy(lib->funcname, "run");
+	}
+
+	if (!strlen(lib->filename)) {
+		lib->run = dlsym(lib->handle, lib->funcname);
+		lib->p_run = NULL;
+		if (lib->run == NULL) {
+			printf("Error: %s could not be executed.\n", lib->libname);
+			return -1;
+		}
+		return 0;
+	}
+
+	lib->p_run = dlsym(lib->handle, lib->funcname);
+	lib->run = NULL;
+	if (lib->p_run == NULL) {
+		printf("Error: %s %s %s could not be executed.\n", lib->libname, lib->funcname, lib->filename);
+		return -1;
+	}
+	return 0;
+}
+
+static int lib_execute(struct lib *lib)
+{
+	/* TODO: Implement lib_execute(). */
+	int rc;
 
 	if (!strlen(lib->filename)) {
 		lib->run();
