@@ -21,16 +21,16 @@
 static int lib_prehooks(struct lib *lib)
 {
 	/* TODO: Implement lib_prehooks(). */
-	lib->libname = (char *) calloc(sizeof(char) * BUFSIZE);
+	lib->libname = calloc(BUFSIZE, sizeof(char));
 	if (lib->libname == NULL)
 		return -1;
-	lib->funcname = (char *) calloc(sizeof(char) * BUFSIZE);
+	lib->funcname = calloc(BUFSIZE, sizeof(char));
 	if (lib->funcname == NULL)
 		return -1;
-	lib->filename = (char *) calloc(sizeof(char) * BUFSIZE);
+	lib->filename = calloc(BUFSIZE, sizeof(char));
 	if (lib->filename == NULL)
 		return -1;
-	lib->outputfile = (char *) calloc(sizeof(char) * BUFSIZE);
+	lib->outputfile = calloc(BUFSIZE, sizeof(char));
 	if (lib->outputfile == NULL)
 		return -1;
 
@@ -73,10 +73,6 @@ static int lib_run(struct lib *lib)
 {
 	int err;
 
-	err = lib_prehooks(lib);
-	if (err)
-		return err;
-
 	err = lib_load(lib);
 	if (err)
 		return err;
@@ -111,13 +107,13 @@ int main(void)
 	struct sockaddr_un addr, raddr;
 	socklen_t raddrlen;
 	int listenfd, connectfd;
-	char buf[BUFSIZE], name[BUFSIZE], func[BUFSIZE], params[BUFSIZE];
+	char buf[BUFSIZE];
 
 	remove(SOCKET_NAME);
 
 	listenfd = create_socket();
 	if (listenfd == -1) {
-		perror("unix socket");
+		fprintf(stderr, "unix socket");
 		return -1;
 	}
 	memset(&addr, 0, sizeof(addr));
@@ -125,13 +121,13 @@ int main(void)
 	snprintf(addr.sun_path, sizeof(SOCKET_NAME), "%s", SOCKET_NAME);
 	ret	= bind(listenfd, (struct sockaddr *) &addr, sizeof(addr));
 	if (ret == -1) {
-		perror("bind unix socket");
+		fprintf(stderr, "bind unix socket");
 		return -1;
 	}
 
 	ret = listen(listenfd, MAX_CLIENTS);
 	if (ret == -1) {
-		perror("listen unix socket");
+		fprintf(stderr, "listen unix socket");
 		return -1;
 	}
 
@@ -140,12 +136,16 @@ int main(void)
 
 		connectfd = accept(listenfd, (struct sockaddr *) &raddr, &raddrlen);
 		if (connectfd == -1) {
-			perror("accept unix socket");
+			fprintf(stderr, "accept unix socket");
 			return -1;
 		}
 
 		memset(buf, 0, BUFSIZE);
 		ssize_t recv_id = recv_socket(connectfd, buf, BUFSIZE);
+		if (recv_id == -1) {
+			fprintf(stderr, "failed recv");
+			return -1;
+		}
 
 		lib_prehooks(&lib);
 
