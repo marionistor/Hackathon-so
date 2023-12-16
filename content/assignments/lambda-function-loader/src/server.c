@@ -123,7 +123,7 @@ int main(void)
 		/* TODO - parse message with parse_command and populate lib */
 		/* TODO - handle request from client */
 		ret = lib_run(&lib);
-		close(connectfd);
+		close_socket(connectfd);
 	}
 
 	close_socket(listenfd);
