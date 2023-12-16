@@ -47,7 +47,15 @@ static int lib_load(struct lib *lib)
 	lib->handle = dlopen(lib->filename, RTLD_LAZY);
 	if (lib->handle == NULL)
 		return -1;
-
+	if (strlen(lib->funcname) == 0) {
+		lib->run = dlsym(lib->handle, lib->funcname);
+		if (lib->run == NULL)
+			return -1;
+	} else {
+		lib->p_run = dlsym(lib->handle, lib->funcname);
+		if (lib->p_run == NULL)
+			return -1;
+	}
 	return 0;
 }
 
